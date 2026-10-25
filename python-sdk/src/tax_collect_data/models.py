@@ -44,7 +44,7 @@ class RequestStatus(IntEnum):
     SUCCESS = 1
     FAILED = 2
     PENDING = 3
-
+_RequestStatus = RequestStatus
 
 class ShippingGoodDto(ApiModel):
     sgid: str | None = None
@@ -184,12 +184,15 @@ class Pageable(ApiModel):
     PageNumber: int = 0
     PageSize: int = 10
 
+_Pageable = Pageable
+
+
 
 class InquiryByTimeRangeDto(ApiModel):
     Start: datetime
     End: datetime | None = None
-    Pageable: Pageable | None = None
-    Status: RequestStatus | None = None
+    Pageable: _Pageable | None = None
+    Status: _RequestStatus | None = None
 
 
 class InquiryByUidDto(ApiModel):
@@ -258,7 +261,7 @@ class BatchResponseDto(ApiModel):
 
 
 class RegisterPaymentResultDto(ApiModel):
-    RequestStatus: RequestStatus | None = None
+    RequestStatus: _RequestStatus | None = None
     Error: list[ErrorItemDto] = Field(default_factory=list)
 
 
