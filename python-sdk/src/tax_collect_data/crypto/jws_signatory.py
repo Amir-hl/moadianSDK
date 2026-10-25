@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 from typing import Any
 
 from cryptography import x509
-from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import padding, rsa
 
 from tax_collect_data.exceptions import CryptographyError
@@ -39,9 +39,7 @@ class JwsSignatory:
         if data is None or data == "":
             raise ValueError("data cannot be null or empty")
         payload = self._payload_value(data)
-        cert_der = self._certificate.public_bytes(__import__(
-            "cryptography.hazmat.primitives.serialization", fromlist=["Encoding"]
-        ).Encoding.DER)
+        cert_der = self._certificate.public_bytes(serialization.Encoding.DER)
         header = {
             "alg": "RS256",
             "x5c": [base64.b64encode(cert_der).decode("ascii")],
