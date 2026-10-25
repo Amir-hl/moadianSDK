@@ -679,3 +679,34 @@ options.RequestTimeout = TimeSpan.FromMinutes(15);
 
 **نکته:** این SDK بر اساس Clean Architecture طراحی شده و کاملاً قابل تست است. برای اطلاعات بیشتر به مستندات مراجعه کنید.
 
+
+
+---
+
+## Python port (work in progress)
+
+An incremental Python implementation is being developed under [`python-sdk/`](python-sdk/README.md). The original .NET source remains in the repository as the behavioral reference until the Python port has feature parity and passes tests.
+
+Initial Python components include:
+- SDK configuration and domain exceptions
+- Verhoeff check-digit algorithm and tax-ID generation
+- API data models and JSON serialization
+- URL and HTTP request construction
+- Certificate loading, JWS signing and JWE encryption primitives
+- Async authenticated HTTP transport and an initial SDK facade
+
+**This is not yet a complete or production-verified replacement for the .NET SDK.** In particular, PKCS#11 hardware-token support, full response/model parity, integration tests against approved test endpoints, and independent verification of tax API cryptographic behavior remain outstanding. See [Python port status](python-sdk/README.md) before using it.
+
+### Python development
+
+```powershell
+cd python-sdk
+py -m venv .venv
+.venv\Scripts\Activate.ps1
+python -m pip install -e ".[test]"
+pytest
+```
+
+### Key material warning
+
+Do not commit real private keys, PINs, credentials, or production taxpayer data. The original sample folder contains files named `privatekey1.pem` and `cert1.crt`; confirm that these are disposable test credentials. If a real private key was pushed to a remote repository, treat it as exposed, rotate/revoke it as applicable, and remove it from repository history as well as the current tree.
