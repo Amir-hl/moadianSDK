@@ -5,7 +5,10 @@ from pydantic import TypeAdapter
 from tax_collect_data.http.client import TaxHttpClient
 from tax_collect_data.http.request_provider import RequestProvider
 from tax_collect_data.models import (
+    Article6StatusDto,
+    Article6StatusRequestDto,
     BatchResponseDto,
+    FiscalFullInformationDto,
     InquiryByReferenceNumberDto,
     InquiryByTimeRangeDto,
     InquiryByUidDto,
@@ -15,6 +18,7 @@ from tax_collect_data.models import (
     RegisterPaymentResultDto,
     ServerInformationDto,
     TaxpayerDto,
+    TaxpayerInfoDto,
 )
 
 
@@ -48,6 +52,20 @@ class TaxApiClient:
     async def get_taxpayer(self, economic_code: str) -> TaxpayerDto:
         method, request = self._requests.taxpayer(economic_code)
         return await self._http.send(method, request, TaxpayerDto)
+
+    async def get_fiscal_information(self, memory_id: str) -> FiscalFullInformationDto:
+        method, request = self._requests.fiscal_information(memory_id)
+        return await self._http.send(method, request, FiscalFullInformationDto)
+
+    async def get_taxpayer_info(self, economic_code: str) -> TaxpayerInfoDto:
+        method, request = self._requests.taxpayer_info(economic_code)
+        return await self._http.send(method, request, TaxpayerInfoDto)
+
+    async def get_taxpayer_article6_status(
+        self, request_dto: Article6StatusRequestDto
+    ) -> Article6StatusDto:
+        method, request = self._requests.taxpayer_article6_status(request_dto)
+        return await self._http.send(method, request, Article6StatusDto)
 
     async def get_server_information(self) -> ServerInformationDto:
         method, request = self._requests.server_information()

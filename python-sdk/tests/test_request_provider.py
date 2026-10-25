@@ -2,7 +2,13 @@ from datetime import datetime, timezone
 
 from tax_collect_data.http.request_provider import RequestProvider
 from tax_collect_data.http.url_provider import UrlProvider
-from tax_collect_data.models import InquiryByUidDto, Pageable, InquiryByTimeRangeDto, RequestStatus
+from tax_collect_data.models import (
+    Article6StatusRequestDto,
+    InquiryByUidDto,
+    Pageable,
+    InquiryByTimeRangeDto,
+    RequestStatus,
+)
 
 
 def test_inquiry_by_uid_preserves_repeated_uid_parameters():
@@ -32,3 +38,38 @@ def test_inquiry_by_time_includes_pagination_and_status():
     assert ("pageNumber", "2") in kwargs["params"]
     assert ("pageSize", "25") in kwargs["params"]
     assert ("status", "SUCCESS") in kwargs["params"]
+
+
+
+def test_fiscal_information_request_uses_memory_id():
+    provider = RequestProvider(UrlProvider("https://api.example.test"))
+    method, kwargs = provider.fiscal_information("MEMORY-123")
+    assert method == "GET"
+    assert kwargs["url"].endswith("/api/v2/fiscal-information")
+    assert kwargs["params"] == {"memoryId": "MEMORY-123"}
+
+
+def test_taxpayer_info_request_uses_economic_code():
+    provider = RequestProvider(UrlProvider("https://api.example.test"))
+    method, kwargs = provider.taxpayer_info("1234567890")
+    assert method == "GET"
+    assert kwargs["url"].endswith("/api/v2/taxpayer-info")
+    assert kwargs["params"] == {"economicCode": "1234567890"}
+
+
+def test_taxpayer_article6_status_request_includes_all_query_fields():
+    provider = RequestProvider(UrlProvider("https://api.example.test"))
+    method, kwargs = provider.taxpayer_article6_status(
+        Article6StatusRequestDto(
+            EconomicCode="1234567890",
+            VatValue=250000,
+            Period=1405,
+        )
+    )
+    assert method == "GET"
+    assert kwargs["url"].endswith("/api/v2/taxpayer-article6-status")
+    assert kwargs["params"] == {
+        "economicCode": "1234567890",
+        "vatValue": "250000",
+        "period": "1405",
+    }
