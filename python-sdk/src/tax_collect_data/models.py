@@ -14,8 +14,10 @@ from pydantic import BaseModel, ConfigDict, Field
 
 
 def _camel_case(name: str) -> str:
-    first, *rest = name.split("_")
-    return first + "".join(part[:1].upper() + part[1:] for part in rest)
+    if "_" in name:
+        first, *rest = name.split("_")
+        return first + "".join(part[:1].upper() + part[1:] for part in rest)
+    return name[:1].lower() + name[1:]
 
 
 class ApiModel(BaseModel):
