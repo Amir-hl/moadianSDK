@@ -9,6 +9,7 @@ from tax_collect_data.models import (
     InquiryByUidDto,
     PacketDto,
     RegisterPaymentRequestDto,
+    Article6StatusRequestDto,
 )
 from tax_collect_data.http.url_provider import UrlProvider
 from tax_collect_data.serialization import serialize
@@ -76,6 +77,30 @@ class RequestProvider:
         return "GET", {
             "url": self._urls.get_url("taxpayer"),
             "params": {"economicCode": economic_code},
+        }
+
+    def fiscal_information(self, memory_id: str) -> tuple[str, dict[str, object]]:
+        return "GET", {
+            "url": self._urls.get_url("fiscal-information"),
+            "params": {"memoryId": memory_id},
+        }
+
+    def taxpayer_info(self, economic_code: str) -> tuple[str, dict[str, object]]:
+        return "GET", {
+            "url": self._urls.get_url("taxpayer-info"),
+            "params": {"economicCode": economic_code},
+        }
+
+    def taxpayer_article6_status(
+        self, request: Article6StatusRequestDto
+    ) -> tuple[str, dict[str, object]]:
+        return "GET", {
+            "url": self._urls.get_url("taxpayer-article6-status"),
+            "params": {
+                "economicCode": request.EconomicCode,
+                "vatValue": str(request.VatValue),
+                "period": str(request.Period),
+            },
         }
 
     def register_payment(self, request: RegisterPaymentRequestDto) -> tuple[str, dict[str, object]]:
