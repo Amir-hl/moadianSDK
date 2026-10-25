@@ -41,7 +41,7 @@ class RequestProvider:
         if dto.End is not None:
             query.append(("end", _format_datetime(dto.End)))
         if dto.Status is not None:
-            query.append(("status", str(int(dto.Status))))
+            query.append(("status", dto.Status.name))
         if dto.Pageable is not None:
             query.extend([
                 ("pageNumber", str(dto.Pageable.PageNumber)),
