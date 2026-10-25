@@ -1,0 +1,19 @@
+# Python SDK development
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.coverage
+htmlcov/
+build/
+dist/
+*.egg-info/
+
+# Never commit private credentials or production certificates
+.env
+.env.*
+*.key
+*.pem
+*_private*
+privatekey*
