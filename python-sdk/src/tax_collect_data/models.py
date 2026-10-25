@@ -262,9 +262,22 @@ class RegisterPaymentResultDto(ApiModel):
     Error: list[ErrorItemDto] = Field(default_factory=list)
 
 
+class PublicKeyDto(ApiModel):
+    Id: str = ""
+    Key: str = ""
+    Algorithm: str | None = None
+    Purpose: int | None = None
+
+
 class ServerInformationDto(ApiModel):
-    model_config = ConfigDict(alias_generator=_camel_case, populate_by_name=True, extra="allow")
+    ServerTime: int = 0
+    PublicKeys: list[PublicKeyDto] = Field(default_factory=list)
 
 
 class TaxpayerDto(ApiModel):
-    model_config = ConfigDict(alias_generator=_camel_case, populate_by_name=True, extra="allow")
+    NameTrade: str = ""
+    TaxpayerStatus: str = ""
+    TaxpayerType: str = ""
+    PostalcodeTaxpayer: str = ""
+    AddressTaxpayer: str = ""
+    NationalId: str = ""
