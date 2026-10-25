@@ -281,3 +281,28 @@ class TaxpayerDto(ApiModel):
     PostalcodeTaxpayer: str = ""
     AddressTaxpayer: str = ""
     NationalId: str = ""
+
+
+class FiscalFullInformationDto(ApiModel):
+    NameTrade: str = ""
+    FiscalStatus: str = ""
+    SaleThreshold: str = ""
+    EconomicCode: str = ""
+    NationalId: str = ""
+
+
+class TaxpayerInfoDto(ApiModel):
+    TaxpayerName: str = ""
+    TaxpayerProfileStatus: int = 0
+    TaxpayerCallStatus: bool = False
+    TaxpayerArticle2Status: bool = False
+
+
+class Article6StatusRequestDto(ApiModel):
+    EconomicCode: str
+    VatValue: int
+    Period: int
+
+
+class Article6StatusDto(ApiModel):
+    Article6RemainStatus: bool = False
