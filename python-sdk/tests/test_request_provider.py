@@ -31,4 +31,4 @@ def test_inquiry_by_time_includes_pagination_and_status():
     assert method == "GET"
     assert ("pageNumber", "2") in kwargs["params"]
     assert ("pageSize", "25") in kwargs["params"]
-    assert ("status", "1") in kwargs["params"]
+    assert ("status", "SUCCESS") in kwargs["params"]
