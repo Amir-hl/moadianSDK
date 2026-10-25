@@ -1,5 +1,6 @@
 """Cached server encryption-key provider."""
 
+import asyncio
 import base64
 import random
 import time
@@ -23,7 +24,7 @@ class EncryptionKeyRepository:
         self._expires_at = 0.0
         self._key_id: str | None = None
         self._key: rsa.RSAPublicKey | None = None
-        self._lock = __import__("asyncio").Lock()
+        self._lock = asyncio.Lock()
 
     async def refresh_if_needed(self) -> None:
         if self._key is not None and time.monotonic() < self._expires_at:
