@@ -71,6 +71,7 @@ class TaxApiClient:
         method, request = self._requests.server_information()
         return await self._http.send(method, request, ServerInformationDto)
 
-    async def register_payment(self, request_dto: RegisterPaymentRequestDto) -> RegisterPaymentResultDto:
+    async def register_payment(self, request_dto: RegisterPaymentRequestDto
+    ) -> RegisterPaymentResultDto:
         method, request = self._requests.register_payment(request_dto)
         return await self._http.send(method, request, RegisterPaymentResultDto)
