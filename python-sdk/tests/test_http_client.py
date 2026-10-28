@@ -128,3 +128,66 @@ async def test_get_taxpayer_article6_status():
         {"url": "https://api.example.test/api/v2/taxpayer-article6-status"},
         Article6StatusDto,
     )
+
+
+@pytest.mark.asyncio
+async def test_transport_supports_custom_authorization_header():
+    calls = []
+
+    async def handler(request: httpx.Request) -> httpx.Response:
+        calls.append(request)
+        if request.url.path.endswith("/nonce"):
+            return httpx.Response(200, json={"nonce": "nonce-value"})
+        return httpx.Response(200, json={"serverTime": 123, "publicKeys": []})
+
+    async with httpx.AsyncClient(
+        transport=httpx.MockTransport(handler)
+    ) as client:
+        transport = TaxHttpClient(
+            "A111YO",
+            FakeSignatory(),
+            authorization_header_name="Token",
+            client=client,
+        )
+        await transport.send(
+            "GET",
+            {"url": "https://api.example.test/api/v2/server-information"},
+            ServerInformationDto,
+        )
+
+    assert calls[0].headers.get("Token") is None
+    assert calls[1].headers["Token"] == "Bearer signed-token"
+    assert "Authorization" not in calls[1].headers
+
+
+@pytest.mark.asyncio
+async def test_custom_headers_are_sent_to_nonce_and_api():
+    calls = []
+
+    async def handler(request: httpx.Request) -> httpx.Response:
+        calls.append(request)
+        if request.url.path.endswith("/nonce"):
+            return httpx.Response(200, json={"nonce": "nonce-value"})
+        return httpx.Response(200, json={"serverTime": 123, "publicKeys": []})
+
+    async with httpx.AsyncClient(
+        transport=httpx.MockTransport(handler)
+    ) as client:
+        transport = TaxHttpClient(
+            "A111YO",
+            FakeSignatory(),
+            custom_headers={"X-Test-Header": "test-value"},
+            client=client,
+        )
+        await transport.send(
+            "GET",
+            {"url": "https://api.example.test/api/v2/server-information"},
+            ServerInformationDto,
+        )
+
+    assert len(calls) == 2
+    assert all(
+        request.headers["X-Test-Header"] == "test-value"
+        for request in calls
+    )
+    assert calls[1].headers["Authorization"] == "Bearer signed-token"

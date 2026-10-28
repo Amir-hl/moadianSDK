@@ -61,6 +61,7 @@ class TaxSdk:
             signatory,
             timeout=options.request_timeout,
             custom_headers=options.custom_headers,
+            authorization_header_name=options.authorization_header_name,
         )
         api_client = TaxApiClient(http_client, request_provider)
 
