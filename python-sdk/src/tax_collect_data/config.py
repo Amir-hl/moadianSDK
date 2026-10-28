@@ -17,6 +17,7 @@ class TaxSdkOptions:
     request_timeout: float = 600.0
     api_version: str = "v2"
     custom_headers: dict[str, str] = field(default_factory=dict)
+    authorization_header_name: str = "Authorization"
 
     def validate(self) -> None:
         if not self.base_url or not self.base_url.strip():
@@ -30,6 +31,11 @@ class TaxSdkOptions:
             raise ValueError("request_timeout must be greater than zero")
         if not self.api_version or not self.api_version.strip():
             raise ValueError("api_version is required")
+        if (
+            not self.authorization_header_name
+            or not self.authorization_header_name.strip()
+        ):
+            raise ValueError("authorization_header_name cannot be empty")
 
         has_pkcs8 = bool(self.private_key_path and self.certificate_path)
         has_pkcs11 = bool(self.pkcs11_library_path and self.pkcs11_token_serial_number)
