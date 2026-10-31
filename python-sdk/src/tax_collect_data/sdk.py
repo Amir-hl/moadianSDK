@@ -89,7 +89,7 @@ class TaxSdk:
                 Data=item.Data,
                 Uid=item.Uid,
                 ReferenceNumber=item.ReferenceNumber,
-                TaxId=tax_ids_by_trace.get(item.Uid, ""),
+                TaxId=tax_ids_by_trace[item.Uid],
             )
             for item in response.Result
         ]

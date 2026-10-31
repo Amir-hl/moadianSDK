@@ -1,7 +1,9 @@
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 
+from tax_collect_data.http.request_provider import _format_datetime
 from tax_collect_data.http.request_provider import RequestProvider
 from tax_collect_data.http.url_provider import UrlProvider
+
 from tax_collect_data.models import (
     Article6StatusRequestDto,
     InquiryByUidDto,
@@ -73,3 +75,26 @@ def test_taxpayer_article6_status_request_includes_all_query_fields():
         "vatValue": "250000",
         "period": "1405",
     }
+
+def test_format_datetime_matches_dotnet_format_without_timezone():
+    value = datetime(2026, 10, 31, 12, 30, 45, 123456)
+
+    assert _format_datetime(value) == "2026-10-31T12:30:45.123456000"
+
+
+def test_format_datetime_matches_dotnet_format_with_utc_timezone():
+    value = datetime(
+        2026, 10, 31, 12, 30, 45, 123456,
+        tzinfo=timezone.utc,
+    )
+
+    assert _format_datetime(value) == "2026-10-31T12:30:45.123456000Z"
+
+
+def test_format_datetime_matches_dotnet_format_with_positive_offset():
+    value = datetime(
+        2026, 10, 31, 12, 30, 45, 123456,
+        tzinfo=timezone(timedelta(hours=3, minutes=30)),
+    )
+
+    assert _format_datetime(value) == "2026-10-31T12:30:45.123456000+03:30"

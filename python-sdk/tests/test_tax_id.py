@@ -5,6 +5,18 @@ import pytest
 from tax_collect_data.providers.tax_id import TaxIdProvider
 
 
+
+def test_generate_tax_id_matches_official_document_example():
+    provider = TaxIdProvider()
+
+    result = provider.generate_tax_id(
+        client_id="DEF5GH",
+        serial=12,
+        date=datetime(2020, 7, 20),
+    )
+
+    assert result == "DEF5GH0481F000000000C2"
+
 def test_generation_is_deterministic():
     provider = TaxIdProvider()
     date = datetime(2024, 1, 1, tzinfo=timezone.utc)

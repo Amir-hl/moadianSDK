@@ -1,6 +1,7 @@
-"""JSON serialization helpers compatible with the source SDK's camelCase output."""
 
-import json
+"""JSON serialization helpers compatible with the source C# SDK."""
+
+import simplejson as json
 from datetime import date, datetime
 from decimal import Decimal
 from enum import Enum
@@ -9,21 +10,46 @@ from typing import Any
 from pydantic import BaseModel
 
 
-def _json_default(value: Any) -> Any:
+def _normalize(value: Any) -> Any:
+    """Convert Python values to JSON-compatible values."""
+
+    # IntEnum must be checked before primitive types.
+    if isinstance(value, Enum):
+        return value.name
+
     if isinstance(value, BaseModel):
-        return value.to_api_dict() if hasattr(value, "to_api_dict") else value.model_dump(by_alias=True, exclude_none=True)
+        if hasattr(value, "to_api_dict"):
+            value = value.to_api_dict(exclude_none=False)
+        else:
+            value = value.model_dump(
+                by_alias=True,
+                exclude_none=False,
+            )
+
+    if isinstance(value, dict):
+        return {
+            key: _normalize(item)
+            for key, item in value.items()
+        }
+
+    if isinstance(value, (list, tuple)):
+        return [_normalize(item) for item in value]
+
     if isinstance(value, (datetime, date)):
         return value.isoformat()
-    if isinstance(value, Decimal):
-        return float(value)
-    if isinstance(value, Enum):
-        return value.value
-    raise TypeError(f"Object of type {type(value).__name__} is not JSON serializable")
+
+    return value
 
 
 def serialize(value: Any) -> str:
-    return json.dumps(value, default=_json_default, ensure_ascii=False, separators=(",", ":"))
+    return json.dumps(
+        _normalize(value),
+        ensure_ascii=False,
+        separators=(",", ":"),
+        use_decimal=True,
+        allow_nan=False,
+    )
 
 
 def deserialize(payload: str) -> Any:
-    return json.loads(payload)
+    return json.loads(payload, use_decimal=True)

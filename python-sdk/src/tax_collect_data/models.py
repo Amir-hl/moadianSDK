@@ -28,8 +28,11 @@ class ApiModel(BaseModel):
         validate_assignment=True,
     )
 
-    def to_api_dict(self, *, exclude_none: bool = True) -> dict[str, Any]:
-        return self.model_dump(by_alias=True, exclude_none=exclude_none)
+    def to_api_dict(self, *, exclude_none: bool = False) -> dict[str, Any]:
+        return self.model_dump(
+            by_alias=True,
+            exclude_none=exclude_none,
+        )
 
 
 class PaymentMethod(IntEnum):

@@ -16,9 +16,34 @@ from tax_collect_data.serialization import serialize
 
 
 def _format_datetime(value: datetime) -> str:
-    # ISO 8601 with timezone when present. Confirm exact wire format against
-    # official API/test fixtures before production use.
-    return value.isoformat(timespec="microseconds")
+    """Format datetime using the source .NET SDK's DateTimeFormat."""
+
+    formatted = value.strftime("%Y-%m-%dT%H:%M:%S")
+
+    # Python datetime has microsecond precision (6 digits).
+    # .NET format has 7 fractional digits followed by two literal zeros.
+    fractional_seconds = f"{value.microsecond:06d}0"
+
+    # Match .NET DateTime.ToString("K") behavior:
+    # - naive datetime: no timezone suffix
+    # - UTC: Z
+    # - other timezone-aware values: ±HH:mm
+    timezone_suffix = ""
+
+    if value.tzinfo is not None and value.utcoffset() is not None:
+        offset = value.utcoffset()
+
+        if offset.total_seconds() == 0:
+            timezone_suffix = "Z"
+        else:
+            total_minutes = int(offset.total_seconds() // 60)
+            sign = "+" if total_minutes >= 0 else "-"
+            total_minutes = abs(total_minutes)
+
+            hours, minutes = divmod(total_minutes, 60)
+            timezone_suffix = f"{sign}{hours:02d}:{minutes:02d}"
+
+    return f"{formatted}.{fractional_seconds}00{timezone_suffix}"
 
 
 class RequestProvider:

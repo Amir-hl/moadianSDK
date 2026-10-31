@@ -1,6 +1,5 @@
 """Tax ID generation ported from the source implementation."""
-
-from datetime import datetime
+from datetime import date as Date, datetime
 
 from tax_collect_data.algorithms.verhoeff import VerhoeffAlgorithm
 
@@ -11,8 +10,27 @@ class TaxIdProvider:
 
     @staticmethod
     def _to_decimal(memory_id: str) -> str:
-        # Mirrors the C# char conversion used by the original implementation.
-        return "".join(char if char.isdigit() and char.isascii() else str(ord(char)) for char in memory_id)
+        result = []
+
+        for char in memory_id:
+            if "0" <= char <= "9":
+                result.append(char)
+            elif "A" <= char <= "Z":
+                result.append(str(ord(char)))
+            else:
+                raise ValueError(
+                    "memory_id must contain only uppercase ASCII letters and digits"
+                )
+
+        return "".join(result)
+
+
+    @staticmethod
+    def _get_day_range(value: datetime) -> int:
+        invoice_date = value.date()
+        epoch_date = Date(1970, 1, 1)
+
+        return (invoice_date - epoch_date).days
 
     def generate_tax_id(self, client_id: str, serial: int, date: datetime) -> str:
         if not isinstance(client_id, str) or not client_id.strip():
@@ -24,8 +42,7 @@ class TaxIdProvider:
 
         # datetime.timestamp() mirrors DateTimeOffset.ToUnixTimeSeconds for normal
         # post-epoch dates; timezone-aware values retain their supplied offset.
-        seconds = int(date.timestamp())
-        day_range = int(seconds / 86400)
+        day_range = self._get_day_range(date)
         hex_time = format(day_range, "x")
         hex_serial = format(serial, "x")
         initial = f"{client_id}{hex_time.zfill(5)}{hex_serial.zfill(10)}"
