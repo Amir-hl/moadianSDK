@@ -15,15 +15,15 @@ def _normalize(value: Any) -> Any:
 
     # IntEnum must be checked before primitive types.
     if isinstance(value, Enum):
-        return value.name
+        return value.value
 
     if isinstance(value, BaseModel):
         if hasattr(value, "to_api_dict"):
-            value = value.to_api_dict(exclude_none=False)
+            value = value.to_api_dict(exclude_none=True)
         else:
             value = value.model_dump(
                 by_alias=True,
-                exclude_none=False,
+                exclude_none=True,
             )
 
     if isinstance(value, dict):
