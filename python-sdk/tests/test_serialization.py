@@ -22,17 +22,20 @@ def test_serialization_uses_compact_camel_case_json():
     assert '"indatim":123' in value
 
 
-def test_serialization_preserves_none_values():
+def test_serialization_omits_none_values_but_preserves_empty_lists():
     invoice = InvoiceDto(
         Header=HeaderDto(taxid="T1", indatim=123, ins=1)
     )
 
     value = serialize(invoice)
 
-    assert '"indati2m":null' in value
+    assert '"indati2m"' not in value
+    assert '"body":[]' in value
+    assert '"payments":[]' in value
+    assert '"extension":[]' in value
 
 
-def test_serialization_uses_string_enum_values():
+def test_serialization_uses_numeric_enum_values():
     request = RegisterPaymentRequestDto(
         TaxId="T1",
         PaidAmount=1000,
@@ -42,8 +45,8 @@ def test_serialization_uses_string_enum_values():
 
     value = serialize(request)
 
-    assert '"paymentMethod":"CASH"' in value
-    assert '"paymentMethod":1' not in value
+    assert '"paymentMethod":1' in value
+    assert '"paymentMethod":"CASH"' not in value
 
 
 def test_serialization_preserves_decimal_values_as_json_numbers():
