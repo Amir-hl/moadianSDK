@@ -29,7 +29,10 @@ class ApiModel(BaseModel):
     )
 
     def to_api_dict(self, *, exclude_none: bool = True) -> dict[str, Any]:
-        return self.model_dump(by_alias=True, exclude_none=exclude_none)
+        return self.model_dump(
+            by_alias=True,
+            exclude_none=exclude_none,
+        )
 
 
 class PaymentMethod(IntEnum):
@@ -44,7 +47,7 @@ class RequestStatus(IntEnum):
     SUCCESS = 1
     FAILED = 2
     PENDING = 3
-
+_RequestStatus = RequestStatus
 
 class ShippingGoodDto(ApiModel):
     sgid: str | None = None
@@ -184,12 +187,15 @@ class Pageable(ApiModel):
     PageNumber: int = 0
     PageSize: int = 10
 
+_Pageable = Pageable
+
+
 
 class InquiryByTimeRangeDto(ApiModel):
     Start: datetime
     End: datetime | None = None
-    Pageable: Pageable | None = None
-    Status: RequestStatus | None = None
+    Pageable: _Pageable | None = None
+    Status: _RequestStatus | None = None
 
 
 class InquiryByUidDto(ApiModel):
@@ -258,7 +264,7 @@ class BatchResponseDto(ApiModel):
 
 
 class RegisterPaymentResultDto(ApiModel):
-    RequestStatus: RequestStatus | None = None
+    RequestStatus: _RequestStatus | None = None
     Error: list[ErrorItemDto] = Field(default_factory=list)
 
 
@@ -281,3 +287,28 @@ class TaxpayerDto(ApiModel):
     PostalcodeTaxpayer: str = ""
     AddressTaxpayer: str = ""
     NationalId: str = ""
+
+
+class FiscalFullInformationDto(ApiModel):
+    NameTrade: str = ""
+    FiscalStatus: str = ""
+    SaleThreshold: str = ""
+    EconomicCode: str = ""
+    NationalId: str = ""
+
+
+class TaxpayerInfoDto(ApiModel):
+    TaxpayerName: str = ""
+    TaxpayerProfileStatus: int = 0
+    TaxpayerCallStatus: bool = False
+    TaxpayerArticle2Status: bool = False
+
+
+class Article6StatusRequestDto(ApiModel):
+    EconomicCode: str
+    VatValue: int
+    Period: int
+
+
+class Article6StatusDto(ApiModel):
+    Article6RemainStatus: bool = False

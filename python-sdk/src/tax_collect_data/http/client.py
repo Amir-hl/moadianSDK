@@ -22,14 +22,18 @@ class TaxHttpClient:
         *,
         timeout: float = 600.0,
         custom_headers: dict[str, str] | None = None,
+        authorization_header_name: str = "Authorization",
         client: httpx.AsyncClient | None = None,
     ) -> None:
         if not client_id or not client_id.strip():
             raise ValueError("client_id cannot be empty")
+        if not authorization_header_name or not authorization_header_name.strip():
+            raise ValueError("authorization_header_name cannot be empty")
         self._client_id = client_id
         self._signatory = signatory
         self._timeout = timeout
         self._custom_headers = dict(custom_headers or {})
+        self._authorization_header_name = authorization_header_name.strip()
         self._client = client or httpx.AsyncClient(timeout=timeout)
         self._owns_client = client is None
 
@@ -48,8 +52,11 @@ class TaxHttpClient:
             raise ValueError("request_kwargs must include url")
 
         # The source SDK obtains a fresh nonce and signs { nonce, clientId }
-        # before each protected API request.
-        nonce_response = await self._client.get(url.rsplit("/", 1)[0] + "/nonce")
+        # before each protected API request. Custom headers also apply to nonce.
+        nonce_response = await self._client.get(
+            url.rsplit("/", 1)[0] + "/nonce",
+            headers=self._custom_headers,
+        )
         self._raise_for_api_error(nonce_response)
         nonce_body = nonce_response.json()
         nonce = nonce_body.get("nonce")
@@ -61,7 +68,7 @@ class TaxHttpClient:
         headers = dict(self._custom_headers)
         headers.update(kwargs.pop("headers", {}) or {})
         headers.update({
-            "Authorization": f"Bearer {authorization}",
+            self._authorization_header_name: f"Bearer {authorization}",
             "Accept": "application/json",
             "Accept-Charset": "utf-8",
         })

@@ -9,15 +9,41 @@ from tax_collect_data.models import (
     InquiryByUidDto,
     PacketDto,
     RegisterPaymentRequestDto,
+    Article6StatusRequestDto,
 )
 from tax_collect_data.http.url_provider import UrlProvider
 from tax_collect_data.serialization import serialize
 
 
 def _format_datetime(value: datetime) -> str:
-    # ISO 8601 with timezone when present. Confirm exact wire format against
-    # official API/test fixtures before production use.
-    return value.isoformat(timespec="microseconds")
+    """Format datetime using the source .NET SDK's DateTimeFormat."""
+
+    formatted = value.strftime("%Y-%m-%dT%H:%M:%S")
+
+    # Python datetime has microsecond precision (6 digits).
+    # .NET format has 7 fractional digits followed by two literal zeros.
+    fractional_seconds = f"{value.microsecond:06d}0"
+
+    # Match .NET DateTime.ToString("K") behavior:
+    # - naive datetime: no timezone suffix
+    # - UTC: Z
+    # - other timezone-aware values: ±HH:mm
+    timezone_suffix = ""
+
+    if value.tzinfo is not None and value.utcoffset() is not None:
+        offset = value.utcoffset()
+
+        if offset.total_seconds() == 0:
+            timezone_suffix = "Z"
+        else:
+            total_minutes = int(offset.total_seconds() // 60)
+            sign = "+" if total_minutes >= 0 else "-"
+            total_minutes = abs(total_minutes)
+
+            hours, minutes = divmod(total_minutes, 60)
+            timezone_suffix = f"{sign}{hours:02d}:{minutes:02d}"
+
+    return f"{formatted}.{fractional_seconds}00{timezone_suffix}"
 
 
 class RequestProvider:
@@ -76,6 +102,30 @@ class RequestProvider:
         return "GET", {
             "url": self._urls.get_url("taxpayer"),
             "params": {"economicCode": economic_code},
+        }
+
+    def fiscal_information(self, memory_id: str) -> tuple[str, dict[str, object]]:
+        return "GET", {
+            "url": self._urls.get_url("fiscal-information"),
+            "params": {"memoryId": memory_id},
+        }
+
+    def taxpayer_info(self, economic_code: str) -> tuple[str, dict[str, object]]:
+        return "GET", {
+            "url": self._urls.get_url("taxpayer-info"),
+            "params": {"economicCode": economic_code},
+        }
+
+    def taxpayer_article6_status(
+        self, request: Article6StatusRequestDto
+    ) -> tuple[str, dict[str, object]]:
+        return "GET", {
+            "url": self._urls.get_url("taxpayer-article6-status"),
+            "params": {
+                "economicCode": request.EconomicCode,
+                "vatValue": str(request.VatValue),
+                "period": str(request.Period),
+            },
         }
 
     def register_payment(self, request: RegisterPaymentRequestDto) -> tuple[str, dict[str, object]]:
