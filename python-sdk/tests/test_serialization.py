@@ -72,3 +72,16 @@ def test_serialization_preserves_decimal_precision():
 
     assert deserialized["amount"] == amount
     assert isinstance(deserialized["amount"], Decimal)
+
+def test_serialization_preserves_unicode_and_special_characters():
+    original = {
+        "name": "کالای آزمایشی",
+        "description": 'متن فارسی با "علامت نقل‌قول" و \\ بک‌اسلش',
+        "amount": Decimal("123456789.123456789"),
+    }
+
+    serialized = serialize(original)
+    deserialized = deserialize(serialized)
+
+    assert deserialized == original
+    assert isinstance(deserialized["amount"], Decimal)
