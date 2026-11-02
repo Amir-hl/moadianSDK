@@ -53,3 +53,10 @@ def serialize(value: Any) -> str:
 
 def deserialize(payload: str) -> Any:
     return json.loads(payload, use_decimal=True)
+
+class JsonSerializer:
+    def serialize(self, value: Any) -> str:
+        return serialize(value)
+
+    def deserialize(self, payload: str) -> Any:
+        return deserialize(payload)

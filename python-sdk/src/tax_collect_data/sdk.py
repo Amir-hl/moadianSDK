@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from tax_collect_data.serialization import JsonSerializer
 from tax_collect_data.config import TaxSdkOptions
 from tax_collect_data.crypto.certificate_loader import load_certificate, load_private_key
 from tax_collect_data.crypto.encryption_key_repository import EncryptionKeyRepository
@@ -44,35 +45,73 @@ class TaxSdk:
         self._packets = packet_service
         self._keys = encryption_keys
 
-    @classmethod
-    def configure(cls, options: TaxSdkOptions) -> "TaxSdk":
-        options.validate()
-        if not options.private_key_path or not options.certificate_path:
-            raise NotImplementedError(
-                "PKCS#11 hardware-token signing is not implemented in this Python port yet"
-            )
-        certificate = load_certificate(options.certificate_path)
-        private_key = load_private_key(options.private_key_path)
-        signatory = JwsSignatory(certificate, private_key)
-        url_provider = UrlProvider(options.base_url, options.api_version)
-        request_provider = RequestProvider(url_provider)
-        http_client = TaxHttpClient(
-            options.client_id,
-            signatory,
-            timeout=options.request_timeout,
-            custom_headers=options.custom_headers,
-            authorization_header_name=options.authorization_header_name,
+
+@classmethod
+def configure(cls, options: TaxSdkOptions) -> "TaxSdk":
+    options.validate()
+
+    if not options.private_key_path or not options.certificate_path:
+        raise NotImplementedError(
+            "PKCS#11 hardware-token signing is not implemented "
+            "in this Python port yet"
         )
-        api_client = TaxApiClient(http_client, request_provider)
 
-        async def get_key_records():
+    # Load signing credentials
+    certificate = load_certificate(options.certificate_path)
+    private_key = load_private_key(options.private_key_path)
+
+    # Create shared dependencies
+    serializer = JsonSerializer()
+    signatory = JwsSignatory(certificate, private_key)
+
+    # Create HTTP infrastructure
+    url_provider = UrlProvider(
+        options.base_url,
+        options.api_version,
+    )
+    request_provider = RequestProvider(url_provider)
+
+    http_client = TaxHttpClient(
+        options.client_id,
+        signatory,
+        timeout=options.request_timeout,
+        custom_headers=options.custom_headers,
+    )
+
+    api_client = TaxApiClient(
+        http_client,
+        request_provider,
+    )
+
+    # Create encryption key repository
+    async def get_key_records():
             server_info = await api_client.get_server_information()
-            return [item.model_dump(by_alias=False) for item in server_info.PublicKeys]
+            return [
+                item.model_dump(by_alias=False)
+                for item in server_info.PublicKeys
+            ]
 
-        key_repository = EncryptionKeyRepository(get_key_records)
-        encryptor = JweEncryptor(key_repository.get_key)
-        packet_service = PacketService(options.client_id, signatory, encryptor)
-        return cls(options, api_client, http_client, packet_service, key_repository)
+            key_repository = EncryptionKeyRepository(get_key_records)
+
+            # Create encryption service
+            encryptor = JweEncryptor(key_repository.get_key)
+
+            # Create packet service with injected dependencies
+            packet_service = PacketService(
+                client_id=options.client_id,
+                signatory=signatory,
+                encryptor=encryptor,
+                serializer=serializer,
+            )
+
+            return cls(
+                options,
+                api_client,
+                http_client,
+                packet_service,
+                key_repository,
+            )
+
 
     async def send_invoices(self, invoices: list[InvoiceDto]) -> list[InvoiceResponseDto]:
         if not invoices:
