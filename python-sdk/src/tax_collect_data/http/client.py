@@ -88,13 +88,32 @@ class TaxHttpClient:
     def _raise_for_api_error(response: httpx.Response) -> None:
         if response.is_success:
             return
+
         try:
             body = response.json()
         except ValueError:
             body = {}
-        errors = body.get("errors") or []
-        first_error = errors[0] if errors else {}
-        message = first_error.get("message") or body.get("message") or response.text
+
+        if not isinstance(body, dict):
+            body = {}
+
+        errors = body.get("errors")
+        if not isinstance(errors, list):
+            errors = []
+
+        first_error = (
+            errors[0]
+            if errors and isinstance(errors[0], dict)
+            else {}
+        )
+
+        message = (
+            first_error.get("message")
+            or body.get("message")
+            or response.text
+            or f"HTTP {response.status_code}"
+        )
+
         raise TaxApiError(
             f"Tax API request failed: {message}",
             status_code=response.status_code,

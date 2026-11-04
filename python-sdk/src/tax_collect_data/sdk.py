@@ -46,73 +46,76 @@ class TaxSdk:
         self._keys = encryption_keys
 
 
-@classmethod
-def configure(cls, options: TaxSdkOptions) -> "TaxSdk":
-    options.validate()
+    @classmethod
+    def configure(cls, options: TaxSdkOptions) -> "TaxSdk":
+        options.validate()
 
-    if not options.private_key_path or not options.certificate_path:
-        raise NotImplementedError(
-            "PKCS#11 hardware-token signing is not implemented "
-            "in this Python port yet"
+        if not options.private_key_path or not options.certificate_path:
+            raise NotImplementedError(
+                "PKCS#11 hardware-token signing is not implemented "
+                "in this Python port yet"
+            )
+
+        # Load signing credentials
+        certificate = load_certificate(options.certificate_path)
+        private_key = load_private_key(options.private_key_path)
+
+        # Create shared dependencies
+        serializer = JsonSerializer()
+        signatory = JwsSignatory(
+            certificate,
+            private_key,
+            serializer=serializer,
         )
 
-    # Load signing credentials
-    certificate = load_certificate(options.certificate_path)
-    private_key = load_private_key(options.private_key_path)
+        # Create HTTP infrastructure
+        url_provider = UrlProvider(
+            options.base_url,
+            options.api_version,
+        )
+        request_provider = RequestProvider(url_provider)
 
-    # Create shared dependencies
-    serializer = JsonSerializer()
-    signatory = JwsSignatory(certificate, private_key)
+        http_client = TaxHttpClient(
+            options.client_id,
+            signatory,
+            timeout=options.request_timeout,
+            custom_headers=options.custom_headers,
+            authorization_header_name=options.authorization_header_name,
+        )
 
-    # Create HTTP infrastructure
-    url_provider = UrlProvider(
-        options.base_url,
-        options.api_version,
-    )
-    request_provider = RequestProvider(url_provider)
+        api_client = TaxApiClient(
+            http_client,
+            request_provider,
+        )
 
-    http_client = TaxHttpClient(
-        options.client_id,
-        signatory,
-        timeout=options.request_timeout,
-        custom_headers=options.custom_headers,
-    )
-
-    api_client = TaxApiClient(
-        http_client,
-        request_provider,
-    )
-
-    # Create encryption key repository
-    async def get_key_records():
+        # Create encryption key repository
+        async def get_key_records():
             server_info = await api_client.get_server_information()
             return [
                 item.model_dump(by_alias=False)
                 for item in server_info.PublicKeys
             ]
 
-            key_repository = EncryptionKeyRepository(get_key_records)
+        key_repository = EncryptionKeyRepository(get_key_records)
 
-            # Create encryption service
-            encryptor = JweEncryptor(key_repository.get_key)
+        # Create encryption service
+        encryptor = JweEncryptor(key_repository.get_key)
 
-            # Create packet service with injected dependencies
-            packet_service = PacketService(
-                client_id=options.client_id,
-                signatory=signatory,
-                encryptor=encryptor,
-                serializer=serializer,
-            )
+        # Create packet service
+        packet_service = PacketService(
+            client_id=options.client_id,
+            signatory=signatory,
+            encryptor=encryptor,
+            serializer=serializer,
+        )
 
-            return cls(
-                options,
-                api_client,
-                http_client,
-                packet_service,
-                key_repository,
-            )
-
-
+        return cls(
+            options,
+            api_client,
+            http_client,
+            packet_service,
+            key_repository,
+        )
     async def send_invoices(self, invoices: list[InvoiceDto]) -> list[InvoiceResponseDto]:
         if not invoices:
             raise ValueError("invoices cannot be empty")

@@ -1,6 +1,7 @@
 import httpx
 import pytest
 
+from tax_collect_data.exceptions import TaxApiError
 from tax_collect_data.http.client import TaxHttpClient
 from tax_collect_data.models import ServerInformationDto
 
@@ -191,3 +192,83 @@ async def test_custom_headers_are_sent_to_nonce_and_api():
         for request in calls
     )
     assert calls[1].headers["Authorization"] == "Bearer signed-token"
+
+
+
+def test_api_error_extracts_first_error():
+    response = httpx.Response(
+        400,
+        json={
+            "errors": [
+                {"code": "ERR001", "message": "Invalid invoice"},
+                {"code": "ERR002", "message": "Invalid taxpayer"},
+            ]
+        },
+    )
+
+    with pytest.raises(TaxApiError) as exc_info:
+        TaxHttpClient._raise_for_api_error(response)
+
+    error = exc_info.value
+    assert error.status_code == 400
+    assert error.error_code == "ERR001"
+    assert error.error_message == "Invalid invoice"
+    assert "Invalid invoice" in str(error)
+
+
+def test_api_error_uses_body_message_without_errors():
+    response = httpx.Response(
+        400,
+        json={"message": "Request rejected"},
+    )
+
+    with pytest.raises(TaxApiError) as exc_info:
+        TaxHttpClient._raise_for_api_error(response)
+
+    error = exc_info.value
+    assert error.status_code == 400
+    assert error.error_code is None
+    assert error.error_message == "Request rejected"
+
+
+def test_api_error_handles_non_json_response():
+    response = httpx.Response(
+        500,
+        text="Internal Server Error",
+    )
+
+    with pytest.raises(TaxApiError) as exc_info:
+        TaxHttpClient._raise_for_api_error(response)
+
+    error = exc_info.value
+    assert error.status_code == 500
+    assert error.error_code is None
+    assert error.error_message == "Internal Server Error"
+
+
+@pytest.mark.parametrize(
+    "payload",
+    [
+        [],
+        "Unexpected response",
+        123,
+        None,
+        {"errors": "invalid-format"},
+        {"errors": [None, "invalid-entry"]},
+    ],
+)
+
+
+def test_api_error_handles_unexpected_json_structure(payload):
+    response = httpx.Response(
+        400,
+        json=payload,
+    )
+
+    with pytest.raises(TaxApiError) as exc_info:
+        TaxHttpClient._raise_for_api_error(response)
+
+    error = exc_info.value
+    assert error.status_code == 400
+    assert error.error_code is None
+    assert error.error_message is not None
