@@ -109,7 +109,9 @@ class HeaderDto(ApiModel):
     asd: int | None = None
     In: str | None = None
     an: str | None = None
-
+    insr: int | None = None
+    nti1: str | None = None
+    nti2: str | None = None
 
 class BodyItemDto(ApiModel):
     sstid: str = ""
@@ -146,7 +148,7 @@ class BodyItemDto(ApiModel):
     hs: str = ""
     cpr: Decimal | None = None
     sovat: int | None = None
-
+    vba: Decimal | None = None
 
 class PaymentItemDto(ApiModel):
     iinn: str = ""
