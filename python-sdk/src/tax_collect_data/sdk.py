@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from tax_collect_data.serialization import JsonSerializer
 from tax_collect_data.config import TaxSdkOptions
 from tax_collect_data.crypto.certificate_loader import load_certificate, load_private_key
 from tax_collect_data.crypto.encryption_key_repository import EncryptionKeyRepository
@@ -13,6 +14,10 @@ from tax_collect_data.http.client import TaxHttpClient
 from tax_collect_data.http.request_provider import RequestProvider
 from tax_collect_data.http.url_provider import UrlProvider
 from tax_collect_data.models import (
+    Article6StatusDto,
+    Article6StatusRequestDto,
+    FiscalFullInformationDto,
+    TaxpayerInfoDto,
     InquiryByReferenceNumberDto,
     InquiryByTimeRangeDto,
     InquiryByUidDto,
@@ -40,35 +45,77 @@ class TaxSdk:
         self._packets = packet_service
         self._keys = encryption_keys
 
+
     @classmethod
     def configure(cls, options: TaxSdkOptions) -> "TaxSdk":
         options.validate()
+
         if not options.private_key_path or not options.certificate_path:
             raise NotImplementedError(
-                "PKCS#11 hardware-token signing is not implemented in this Python port yet"
+                "PKCS#11 hardware-token signing is not implemented "
+                "in this Python port yet"
             )
+
+        # Load signing credentials
         certificate = load_certificate(options.certificate_path)
         private_key = load_private_key(options.private_key_path)
-        signatory = JwsSignatory(certificate, private_key)
-        url_provider = UrlProvider(options.base_url, options.api_version)
+
+        # Create shared dependencies
+        serializer = JsonSerializer()
+        signatory = JwsSignatory(
+            certificate,
+            private_key,
+            serializer=serializer,
+        )
+
+        # Create HTTP infrastructure
+        url_provider = UrlProvider(
+            options.base_url,
+            options.api_version,
+        )
         request_provider = RequestProvider(url_provider)
+
         http_client = TaxHttpClient(
             options.client_id,
             signatory,
             timeout=options.request_timeout,
             custom_headers=options.custom_headers,
+            authorization_header_name=options.authorization_header_name,
         )
-        api_client = TaxApiClient(http_client, request_provider)
 
+        api_client = TaxApiClient(
+            http_client,
+            request_provider,
+        )
+
+        # Create encryption key repository
         async def get_key_records():
             server_info = await api_client.get_server_information()
-            return [item.model_dump(by_alias=False) for item in server_info.PublicKeys]
+            return [
+                item.model_dump(by_alias=False)
+                for item in server_info.PublicKeys
+            ]
 
         key_repository = EncryptionKeyRepository(get_key_records)
-        encryptor = JweEncryptor(key_repository.get_key)
-        packet_service = PacketService(options.client_id, signatory, encryptor)
-        return cls(options, api_client, http_client, packet_service, key_repository)
 
+        # Create encryption service
+        encryptor = JweEncryptor(key_repository.get_key)
+
+        # Create packet service
+        packet_service = PacketService(
+            client_id=options.client_id,
+            signatory=signatory,
+            encryptor=encryptor,
+            serializer=serializer,
+        )
+
+        return cls(
+            options,
+            api_client,
+            http_client,
+            packet_service,
+            key_repository,
+        )
     async def send_invoices(self, invoices: list[InvoiceDto]) -> list[InvoiceResponseDto]:
         if not invoices:
             raise ValueError("invoices cannot be empty")
@@ -84,7 +131,7 @@ class TaxSdk:
                 Data=item.Data,
                 Uid=item.Uid,
                 ReferenceNumber=item.ReferenceNumber,
-                TaxId=tax_ids_by_trace.get(item.Uid, ""),
+                TaxId=tax_ids_by_trace[item.Uid],
             )
             for item in response.Result
         ]
@@ -109,6 +156,17 @@ class TaxSdk:
 
     async def inquiry_by_reference_id(self, dto: InquiryByReferenceNumberDto):
         return await self._api.inquiry_by_reference_id(dto)
+
+    async def get_fiscal_information(self, memory_id: str) -> FiscalFullInformationDto:
+        return await self._api.get_fiscal_information(memory_id)
+
+    async def get_taxpayer_info(self, economic_code: str) -> TaxpayerInfoDto:
+        return await self._api.get_taxpayer_info(economic_code)
+
+    async def get_taxpayer_article6_status(
+        self, request: Article6StatusRequestDto
+    ) -> Article6StatusDto:
+        return await self._api.get_taxpayer_article6_status(request)
 
     async def get_taxpayer(self, economic_code: str):
         return await self._api.get_taxpayer(economic_code)

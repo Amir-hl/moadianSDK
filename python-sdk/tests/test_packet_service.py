@@ -4,6 +4,7 @@ from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.x509.oid import NameOID
 from datetime import datetime, timedelta, timezone
 
+from tax_collect_data.serialization import JsonSerializer
 from tax_collect_data.crypto.jws_signatory import JwsSignatory
 from tax_collect_data.crypto.packet_service import PacketService
 from tax_collect_data.models import HeaderDto, InvoiceDto
@@ -28,7 +29,11 @@ def test_packet_contains_fiscal_id_and_trace_id():
         .not_valid_after(datetime.now(timezone.utc) + timedelta(days=1))
         .sign(key, hashes.SHA256())
     )
-    service = PacketService("A111YO", JwsSignatory(cert, key), FakeEncryptor())
+    service = PacketService(    client_id="A111YO",
+                            signatory=JwsSignatory(cert, key),
+                            encryptor=FakeEncryptor(),
+                            serializer=JsonSerializer())
+
     packet = service.create_invoice_packet(
         InvoiceDto(Header=HeaderDto(taxid="TAX-1", indatim=123, ins=1))
     )
