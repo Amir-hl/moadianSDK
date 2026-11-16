@@ -314,3 +314,68 @@ class Article6StatusRequestDto(ApiModel):
 
 class Article6StatusDto(ApiModel):
     Article6RemainStatus: bool = False
+
+
+# --- API v1 Protocol Models (matching .NET 0.0.30) ---
+
+class V1PacketDto(ApiModel):
+    uid: str = ""
+    packet_type: str = ""
+    fiscal_id: str = ""
+    data: Any = None
+    retry: bool = False
+    encryption_key_id: str | None = None
+    symmetric_key: str | None = None
+    iv: str | None = None
+    data_signature: str | None = None
+    signature_key_id: str | None = None
+
+
+class AsyncRequestDto(ApiModel):
+    signature: str | None = None
+    signature_key_id: str | None = None
+    packets: list[V1PacketDto] = Field(default_factory=list)
+
+
+class SyncRequestDto(ApiModel):
+    signature: str | None = None
+    signature_key_id: str | None = None
+    packet: V1PacketDto
+
+
+class TokenModel(ApiModel):
+    token: str = ""
+    expires_in: int = 0
+
+
+class GetTokenDto(ApiModel):
+    username: str
+
+
+class V1PacketResponse(ApiModel):
+    uid: str | None = None
+    reference_number: str | None = None
+    error_code: str | None = None
+    error_detail: str | None = None
+
+
+class V1AsyncResponseModel(ApiModel):
+    timestamp: int | None = None
+    result: list[V1PacketResponse] = Field(default_factory=list)
+    errors: list[ErrorItemDto] = Field(default_factory=list)
+
+
+class V1ResponsePacketModel(ApiModel):
+    uid: str | None = None
+    packet_type: str | None = None
+    data: Any = None
+    encryption_key_id: str | None = None
+    symmetric_key: str | None = None
+    iv: str | None = None
+
+
+class V1SyncResponseModel(ApiModel):
+    timestamp: int | None = None
+    result: V1ResponsePacketModel | None = None
+    errors: list[ErrorItemDto] = Field(default_factory=list)
+

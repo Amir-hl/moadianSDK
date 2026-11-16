@@ -1,5 +1,7 @@
 """SDK configuration."""
 
+from __future__ import annotations
+
 from dataclasses import dataclass, field
 from pathlib import Path
 from urllib.parse import urlparse
@@ -11,11 +13,15 @@ class TaxSdkOptions:
     client_id: str
     private_key_path: str | None = None
     certificate_path: str | None = None
+    private_key: str | None = None
+    certificate: str | None = None
+    private_key_password: str | None = None
+    signatory_key_id: str | None = None
     pkcs11_library_path: str | None = None
     pkcs11_token_serial_number: str | None = None
     pkcs11_token_pin: str | None = None
     request_timeout: float = 600.0
-    api_version: str = "v2"
+    api_version: str = "v1"
     custom_headers: dict[str, str] = field(default_factory=dict)
     authorization_header_name: str = "Authorization"
 
@@ -37,13 +43,29 @@ class TaxSdkOptions:
         ):
             raise ValueError("authorization_header_name cannot be empty")
 
-        has_pkcs8 = bool(self.private_key_path and self.certificate_path)
-        has_pkcs11 = bool(self.pkcs11_library_path and self.pkcs11_token_serial_number)
-        if not (has_pkcs8 or has_pkcs11):
-            raise ValueError(
-                "Either PKCS#8 (private_key_path + certificate_path) or "
-                "PKCS#11 (library path + token serial number) configuration is required"
-            )
+        has_private_key = bool(
+            (self.private_key and self.private_key.strip())
+            or (self.private_key_path and self.private_key_path.strip())
+        )
+        has_certificate = bool(
+            (self.certificate and self.certificate.strip())
+            or (self.certificate_path and self.certificate_path.strip())
+        )
+
+        version = self.api_version.strip().lower()
+        if version == "v1":
+            if not has_private_key:
+                raise ValueError(
+                    "For API v1, private_key (in-memory string) or private_key_path is required"
+                )
+        else:
+            has_pkcs8 = has_private_key and has_certificate
+            has_pkcs11 = bool(self.pkcs11_library_path and self.pkcs11_token_serial_number)
+            if not (has_pkcs8 or has_pkcs11):
+                raise ValueError(
+                    "For API v2, either PKCS#8 (private key + certificate) or "
+                    "PKCS#11 (library path + token serial number) configuration is required"
+                )
 
         if self.private_key_path and not Path(self.private_key_path).is_file():
             raise ValueError(f"Private key file does not exist: {self.private_key_path}")
